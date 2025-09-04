@@ -16,22 +16,7 @@ _start:
     mov rax, 60          ; exit syscall #
     syscall
 """
-
-    with open("driver.asm", "w") as f:
-        f.write(asm_c)
-
-    # assemble
-    subprocess.run(["nasm", "-f", "elf64", "driver.asm", "-o", "driver.o"], check=True)
-
-    # link
-    subprocess.run(["ld", "driver.o", "-o", "driver", "-e", "_start"], check=True)
-
-    # ensure executable
-    os.chmod("driver", 0o755)
-
-    # run and return exit code
-    result = subprocess.run(["./driver"])
-    return result.returncode
+    return build(asm_c, capture_stdout=False)
 
 def test_print_string(s):
     asm_c = f"""section .data
@@ -48,15 +33,7 @@ _start:
     xor rdi, rdi
     syscall
 """
-    with open("driver.asm", "w") as f:
-        f.write(asm_c)
-
-    subprocess.run(["nasm", "-f", "elf64", "driver.asm", "-o", "driver.o"], check=True)
-    subprocess.run(["ld", "driver.o", "-o", "driver", "-e", "_start"], check=True)
-
-    res = subprocess.run(["./driver"], stdout=subprocess.PIPE)
-    output = res.stdout.decode()
-    return output
+    return build(asm_c)
 
 def test_print_char(c):
     asm_c = f"""section .data
@@ -74,15 +51,7 @@ _start:
     xor rdi, rdi
     syscall
 """
-    with open("driver.asm", "w") as f:
-        f.write(asm_c)
-
-    subprocess.run(["nasm", "-f", "elf64", "driver.asm", "-o", "driver.o"], check=True)
-    subprocess.run(["ld", "driver.o", "-o", "driver", "-e", "_start"], check=True)
-
-    res = subprocess.run(["./driver"], stdout=subprocess.PIPE)
-    output = res.stdout.decode()
-    return output
+    return build(asm_c)
 
 def test_print_newline():
     asm_c = f"""section .text
@@ -95,14 +64,7 @@ _start:
     xor rdi, rdi
     syscall
 """
-    with open("driver.asm", "w") as f:
-        f.write(asm_c)
-
-    subprocess.run(["nasm", "-f", "elf64", "driver.asm", "-o", "driver.o"], check=True)
-    subprocess.run(["ld", "driver.o", "-o", "driver", "-e", "_start"], check=True)
-
-    res = subprocess.run(["./driver"], stdout=subprocess.PIPE)
-    output = res.stdout.decode()
+    output = build(asm_c)
 
     if output == "\n":
         return "ok"
@@ -121,15 +83,7 @@ _start:
     xor rdi, rdi
     syscall
 """
-    with open("driver.asm", "w") as f:
-        f.write(asm_c)
-
-    subprocess.run(["nasm", "-f", "elf64", "driver.asm", "-o", "driver.o"], check=True)
-    subprocess.run(["ld", "driver.o", "-o", "driver", "-e", "_start"], check=True)
-
-    res = subprocess.run(["./driver"], stdout=subprocess.PIPE)
-    output = res.stdout.decode()
-    return output
+    return build(asm_c)
 
 def test_parse_uint(s):
     asm_c = f"""section .data
@@ -146,14 +100,24 @@ _start:
     mov rax, 60          ; exit syscall
     syscall
 """
-    with open("driver.asm", "w") as f:
-        f.write(asm_c)
+    return build(asm_c, capture_stdout=False)
 
+def build(asm, capture_stdout=True):
+    with open("driver.asm", "w") as f:
+        f.write(asm)
     subprocess.run(["nasm", "-f", "elf64", "driver.asm", "-o", "driver.o"], check=True)
     subprocess.run(["ld", "driver.o", "-o", "driver", "-e", "_start"], check=True)
+    os.chmod("driver", 0o755)
 
-    result = subprocess.run(["./driver"])
-    return result.returncode
+    if capture_stdout:
+        res = subprocess.run(["./driver"], stdout=subprocess.PIPE)
+        return res.stdout.decode()
+    else:
+        res = subprocess.run(["./driver"])
+        return res.returncode
+
+    
+
 
 def main():
     print('test_string_length("hello")')
