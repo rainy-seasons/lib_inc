@@ -1,6 +1,5 @@
 *.un~
 *.swp
 *.o
-driver.*
 driver
 
