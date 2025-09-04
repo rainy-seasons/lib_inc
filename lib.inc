@@ -70,8 +70,23 @@ print_int:
 
 
 string_equals:
-    xor rax, rax
-    ret
+	xor rax, rax
+.loop:
+	mov al, [rdi] ; load byte from first string
+	mov bl, [rsi] ; load byte from second string
+	cmp al, bl
+	jne .not_equal ; if not equal return 0
+	test al, al ; check for null terminator
+	je .equal ; if both null, strings are equal
+	inc rdi ; move to next byte
+	inc rsi
+	jmp .loop
+.not_equal:
+	xor rax, rax ; return 0
+	ret
+.equal:
+	mov rax, 1 ; return 1
+	ret
 
 
 read_char:

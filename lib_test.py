@@ -102,6 +102,32 @@ _start:
 """
     return build(asm_c, capture_stdout=False)
 
+def test_string_equals(s1, s2):
+    asm_c = f"""
+str1: db "{s1}", 0
+str2: db "{s2}", 0
+
+section .text
+global _start
+%include "lib.inc"
+
+_start:
+    mov rdi, str1
+    mov rsi, str2
+    call string_equals ; returns 1 if equal, 0 otherwise
+    add al, '0' ; convert to ascii '0' or '1'
+    mov dil, al
+    call print_char
+    mov rax, 60
+    xor rdi, rdi
+    syscall
+"""
+    res = build(asm_c)
+    if res == '1':
+        return "TRUE"
+    else:
+        return "FALSE"
+
 def build(asm, capture_stdout=True):
     with open("driver.asm", "w") as f:
         f.write(asm)
@@ -115,9 +141,6 @@ def build(asm, capture_stdout=True):
     else:
         res = subprocess.run(["./driver"])
         return res.returncode
-
-    
-
 
 def main():
     print('test_string_length("hello")')
@@ -142,6 +165,11 @@ def main():
 
     
     print(f"test_parse_uint('45') -> {test_parse_uint('45')}")
+
+    print('test_string_equals("hello", "hello")')
+    print(test_string_equals("hello", "hello"))
+    print('test_string_equals("hello", "world")')
+    print(test_string_equals("hello", "world"))
  
 
 
