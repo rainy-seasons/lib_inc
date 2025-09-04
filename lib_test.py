@@ -58,6 +58,32 @@ _start:
     output = res.stdout.decode()
     return output
 
+def test_print_char(c):
+    asm_c = f"""section .data
+test_char: db "{c}", 0
+
+section .text
+global _start
+%include "lib.inc"
+
+_start:
+    mov al, [test_char]
+    mov dil, al
+    call print_char
+    mov rax, 60
+    xor rdi, rdi
+    syscall
+"""
+    with open("driver.asm", "w") as f:
+        f.write(asm_c)
+
+    subprocess.run(["nasm", "-f", "elf64", "driver.asm", "-o", "driver.o"], check=True)
+    subprocess.run(["ld", "driver.o", "-o", "driver", "-e", "_start"], check=True)
+
+    res = subprocess.run(["./driver"], stdout=subprocess.PIPE)
+    output = res.stdout.decode()
+    return output
+
 def main():
     print('test_string_length("hello")')
     print(test_string_length("hello"))
@@ -68,6 +94,11 @@ def main():
     print(test_print_string("hello"))
     print('test_print_string("")')
     print(test_print_string(""))
+
+    print('test_print_char("A")')
+    print(test_print_char("A"))
+    print('test_print_char("X")')
+    print(test_print_char("X"))
 
 if __name__ == "__main__":
     main()

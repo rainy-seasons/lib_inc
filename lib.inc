@@ -3,9 +3,10 @@ section .text
 string_length:
 	xor rax, rax
 	.loop:
+		; rdi -> pointer to the string
 		cmp byte [rdi + rax], 0 ; check if character is null terminator
 		je .end
-		inc rax 
+		inc rax  ; increment rax as the count
 		jmp .loop
 	.end:
 		ret
@@ -13,7 +14,7 @@ string_length:
 print_string:
 	push rdi     ; copy the string pointer to the stack
 	call string_length
-	mov rdx, rax ; put the length of the string into rdx
+	mov rdx, rax ; put the length of the string into rdx (# of bytes to write)
 	pop rsi      ; pop the string pointer from the stack into rsi
 	mov rax, 1   ; write syscall
 	mov rdi, 1   ; stdout
@@ -21,8 +22,13 @@ print_string:
 	ret
 
 print_char:
-    xor rax, rax
-    ret
+	sub rsp, 2 ; reserve 2 bytes on the stack
+	mov byte [rsp], dil ; store the char
+	mov byte [rsp+1], 0 ; store the null terminator
+	mov rdi, rsp ; pointer to the 2-bytes
+	call print_string
+	add rsp, 2 ; clean up the stack
+	ret
 
 print_newline:
     xor rax, rax
