@@ -109,6 +109,33 @@ _start:
     else:
         return f"Fail: captured {repr(output)}"
 
+def test_print_uint(n):
+    asm_c = f"""section .text
+global _start
+%include "lib.inc"
+
+_start:
+    mov rdi, {n} ; num to print
+    call print_uint
+    mov rax, 60
+    xor rdi, rdi
+    syscall
+"""
+    with open("driver.asm", "w") as f:
+        f.write(asm_c)
+
+    subprocess.run(["nasm", "-f", "elf64", "driver.asm", "-o", "driver.o"], check=True)
+    subprocess.run(["ld", "driver.o", "-o", "driver", "-e", "_start"], check=True)
+
+    res = subprocess.run(["./driver"], stdout=subprocess.PIPE)
+    output = res.stdout.decode()
+    if output == str(n):
+        print("ok")
+    else:
+        print("Fail: got '{output}', expected '{n}'")
+
+    return output
+
 
 def main():
     print('test_string_length("hello")')
@@ -127,6 +154,9 @@ def main():
     print(test_print_char("X"))
 
     print("test_print_newline()... " + test_print_newline())
+
+    print("test_print_uint()... " + test_print_uint(5))
+    print("test_print_uint()... " + test_print_uint(42))
 
 
 if __name__ == "__main__":
