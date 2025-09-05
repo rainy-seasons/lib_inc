@@ -128,19 +128,102 @@ _start:
     else:
         return "FALSE"
 
-def build(asm, capture_stdout=True):
+def test_read_char(s):
+    asm_c = """section .text
+global _start
+%include "lib.inc"
+
+_start:
+    call read_char
+    mov rdi, rax    ; char result
+    test rax, rax   ; if 0 (EOF), skip printing
+    jz .done
+    call print_char
+.done:
+    mov rax, 60
+    xor rdi, rdi
+    syscall
+"""
+    return build(asm_c, input_str=s)
+
+def test_string_copy(s, bufsize):
+    asm_c = f"""section .data
+src_str: db "{s}", 0
+
+section .bss
+dest_str: resb {bufsize}
+
+section .text
+global _start
+%include "lib.inc"
+
+_start:
+    mov rdi, src_str
+    mov rsi, dest_str
+    mov rdx, {bufsize}
+    call string_copy
+    mov rdi, rax
+    test rax, rax
+    jz .fail
+    call print_string
+    jmp .exit
+.fail:
+    mov rdi, failmsg
+    call print_string
+.exit:
+    mov rax, 60
+    xor rdi, rdi
+    syscall
+
+section .data
+failmsg: db "FAIL", 0
+"""
+    return build(asm_c)
+
+def test_read_word(s, bufsize=16):
+    asm_c = f"""section .bss
+dest_str: resb {bufsize}
+
+section .text
+global _start
+%include "lib.inc"
+
+_start:
+    mov rdi, dest_str
+    mov rsi, {bufsize}
+    call read_word
+    mov rdi, rax
+    test rax, rax
+    jz .fail
+    call print_string
+    jmp .exit
+.fail:
+    mov rdi, failmsg
+    call print_string
+.exit:
+    mov rax, 60
+    xor rdi, rdi
+    syscall
+
+section .data
+failmsg: db "FAIL", 0
+"""
+    return build(asm_c, input_str=s)
+
+
+def build(asm, capture_stdout=True, input_str=None):
     with open("driver.asm", "w") as f:
         f.write(asm)
     subprocess.run(["nasm", "-f", "elf64", "driver.asm", "-o", "driver.o"], check=True)
     subprocess.run(["ld", "driver.o", "-o", "driver", "-e", "_start"], check=True)
     os.chmod("driver", 0o755)
 
-    if capture_stdout:
-        res = subprocess.run(["./driver"], stdout=subprocess.PIPE)
-        return res.stdout.decode()
-    else:
-        res = subprocess.run(["./driver"])
-        return res.returncode
+    res = subprocess.run(
+        ["./driver"],
+        input=input_str.encode() if input_str is not None else None,
+        stdout=subprocess.PIPE if capture_stdout else None
+    )
+    return res.stdout.decode() if capture_stdout else res.returncode
 
 def main():
     print('test_string_length("hello")')
@@ -163,7 +246,6 @@ def main():
     print("test_print_uint(5) -> " + test_print_uint(5))
     print("test_print_uint(42) -> " + test_print_uint(42))
 
-    
     print(f"test_parse_uint('45') -> {test_parse_uint('45')}")
 
     print('test_string_equals("hello", "hello")')
@@ -171,6 +253,22 @@ def main():
     print('test_string_equals("hello", "world")')
     print(test_string_equals("hello", "world"))
  
+    print('test_read_char("A") -> ')
+    print(test_read_char("A"))
+    print('test_read_char("") (EOF) -> ')
+    print(test_read_char(""))
+
+    print('test_string_copy("hello", 10) -> ') 
+    print(test_string_copy("hello", 10))
+    print('test_string_copy("toolong", 5) -> ') 
+    print(test_string_copy("toolong", 5))
+
+    print('test_read_word("hello world") -> ') 
+    print(test_read_word("hello world"))
+    print('test_read_word("   spaced") -> ') 
+    print(test_read_word("   spaced"))
+    print('test_read_word("") -> ') 
+    print(test_read_word(""))
 
 
 if __name__ == "__main__":
